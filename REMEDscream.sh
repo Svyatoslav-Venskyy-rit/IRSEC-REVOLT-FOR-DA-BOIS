@@ -73,14 +73,47 @@ elif command -v iptables >/dev/null; then
     done
 fi
 
-# --- Cron Job Clean-up ---
-echo -e "\n=== CRON REMEDIATION ==="
-echo "WARNING: Review all cron jobs manually before proceeding. Clear user crontab completely? (y/n)"
-read -r confirm
-if [ "$confirm" = "y" ]; then
-    crontab -r # WARNING: Wipes the entire user crontab for the current user
-    echo "$(date): Cleared user crontab via 'crontab -r'" >> $LOGFILE
-    echo "User crontab cleared."
+# REVISED CRON JOB CLEAN-UP BLOCK (Interactive Targeting)
+echo -e "\n=== CRON REMEDIATION (Interactive Targeted Removal) ==="
+
+# 1. Check if a user crontab exists
+crontab -l > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo "User crontab found. Do you want to remove a specific malicious job? (y/n)"
+    read -r confirm
+    
+    if [ "$confirm" = "y" ]; then
+        echo "Enter the UNIQUE PHRASE/SIGNATURE of the malicious cron job (e.g., /tmp/backdoor_script.sh):"
+        read -r MALICIOUS_PHRASE
+        
+        if [ -z "$MALICIOUS_PHRASE" ]; then
+            echo "No phrase entered. Aborting targeted cron removal." >> $LOGFILE
+        else
+            echo "Targeting jobs containing: '$MALICIOUS_PHRASE'"
+            
+            # 2. Export the current crontab to a temporary file
+            crontab -l > /tmp/current_crontab.txt
+            
+            # 3. Use sed to remove the line containing the malicious phrase
+            # The 'd' command deletes the line matching the pattern
+            sed "/$MALICIOUS_PHRASE/d" /tmp/current_crontab.txt > /tmp/clean_crontab.txt
+            
+            # 4. Check if a change occurred (safety check)
+            if cmp -s /tmp/current_crontab.txt /tmp/clean_crontab.txt; then
+                echo "$(date): WARNING: Malicious phrase '$MALICIOUS_PHRASE' was NOT found in crontab. No changes made." >> $LOGFILE
+            else
+                # 5. Load the clean crontab back to the system
+                crontab /tmp/clean_crontab.txt
+                echo "$(date): Removed cron job with phrase '$MALICIOUS_PHRASE'. Clean crontab reloaded." >> $LOGFILE
+                echo "Successfully removed the targeted cron job: $MALICIOUS_PHRASE."
+            fi
+            
+            # Clean up temporary files
+            rm /tmp/current_crontab.txt /tmp/clean_crontab.txt
+        fi
+    fi
+else
+    echo "No user crontab found for the current user. Skipping." >> $LOGFILE
 fi
 
 echo -e "\n$(date): Remediation complete. Rerun scan."
