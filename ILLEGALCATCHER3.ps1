@@ -1,3 +1,18 @@
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Prompt","AutoRemove","ReportOnly")]
+    [string]$Action = "Prompt",
+
+    [string[]]$NotifyMethods = @("Console"), # "Console","Toast","SMTP"
+
+    # SMTP configuration (EDIT THESE PLACEHOLDERS)
+    [string]$SmtpServer = "smtp.example.com",
+    [int]$SmtpPort = 587,
+    [string]$SmtpFrom = "alerts@yourdomain.com",
+    [string]$SmtpTo = "admin@yourdomain.com",
+    [string]$SmtpUser = "your-smtp-user",
+    [string]$SmtpPassword = "your-smtp-pass"
+)
 <#
 .SYNOPSIS
     Detect anomalous processes/services on Windows hosts based on expected configurations.
@@ -22,22 +37,6 @@ REQUIREMENTS
     - For toast: Install-Module -Name BurntToast -Scope CurrentUser
     - For SMTP: Configure params (SmtpServer, etc.).
 #>
-
-param(
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("Prompt","AutoRemove","ReportOnly")]
-    [string]$Action = "Prompt",
-
-    [string[]]$NotifyMethods = @("Console"), # "Console","Toast","SMTP"
-
-    # SMTP configuration (EDIT THESE PLACEHOLDERS)
-    [string]$SmtpServer = "smtp.example.com",
-    [int]$SmtpPort = 587,
-    [string]$SmtpFrom = "alerts@yourdomain.com",
-    [string]$SmtpTo = "admin@yourdomain.com",
-    [string]$SmtpUser = "your-smtp-user",
-    [string]$SmtpPassword = "your-smtp-pass"
-)
 
 # -----------------------
 # Helper: Ensure elevated
