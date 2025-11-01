@@ -3,7 +3,8 @@
 # Configuration
 LOGFILE="/var/log/irsec_user_remediation_$(date +%F_%H%M%S).log"
 # Users listed in the IRSeC packet (Local + Domain Users you manage)
-EXPECTED_USERS="root drwho martymcfly arthurdent sambeckett loki riphunter theflash tonystark drstrange bartallen merlin terminator mrpeabody jamescole docbrown professorparadox"
+# ADDED 'whiteteam' to the list to explicitly exclude it from review/deletion
+EXPECTED_USERS="root drwho martymcfly arthurdent sambeckett loki riphunter theflash tonystark drstrange bartallen merlin terminator mrpeabody jamescole docbrown professorparadox whiteteam"
 # System accounts are typically UID < 1000, but we'll include common low-UID exceptions
 SYSTEM_UIDS_MAX=1000
 
@@ -27,6 +28,7 @@ for user in $ALL_USERS; do
         fi
     done
     
+    # Only add the user to the review list if they are NOT in the EXPECTED list
     if [ $IS_EXPECTED -eq 0 ]; then
         USERS_TO_REVIEW+=("$user")
     fi
@@ -44,8 +46,8 @@ else
         USER_INFO=$(getent passwd "$user_to_delete")
         echo -e "\n-----------------------------------------------------"
         echo "🚨 UNEXPECTED ACCOUNT FOUND:" | tee -a $LOGFILE
-        echo "   Username: $user_to_delete" | tee -a $LOGFILE
-        echo "   Full Details: $USER_INFO" | tee -a $LOGFILE
+        echo "    Username: $user_to_delete" | tee -a $LOGFILE
+        echo "    Full Details: $USER_INFO" | tee -a $LOGFILE
         echo "-----------------------------------------------------"
         
         echo "Do you want to DELETE this user and their home directory? (y/n)"
@@ -68,16 +70,4 @@ fi
 
 echo -e "\n$(date): Interactive user management complete." | tee -a $LOGFILE
 
-# Run: chmod +x user_management_interactive.sh && sudo ./user_management_interactive.sh
-
-
-### **How to Run the Script**
-
-1.  **Make executable:**
-    ```bash
-    chmod +x user_management_interactive.sh
-    ```
-2.  **Run with privileges (mandatory for user deletion):**
-    ```bash
-    sudo ./user_management_interactive.sh
-    ```
+# Run: chmod +x user_remediation.sh && sudo ./user_remediation.sh
