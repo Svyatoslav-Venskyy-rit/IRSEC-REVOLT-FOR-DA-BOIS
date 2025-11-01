@@ -2,7 +2,7 @@
 
 # Configuration
 LOGFILE="/var/log/irsec_remediation.log"
-INPUT_CSV="new_passwords.csv" # CSV file with a list of passwords (one per line, no header)
+INPUT_CSV="new_passwords.csv" # CSV file with a list of passwords (MUST HAVE A HEADER NOW)
 OUTPUT_CSV="password_rotation_report.csv"
 # Target users are local accounts that need rotation
 TARGET_USERS="root drwho martymcfly arthurdent sambeckett loki riphunter theflash tonystark drstrange bartallen merlin terminator mrpeabody jamescole docbrown professorparadox"
@@ -15,14 +15,17 @@ if [ ! -f "$INPUT_CSV" ]; then
     exit 1
 fi
 
-# Read passwords into an array, stripping potential Windows-style carriage returns (\r)
-mapfile -t PASSWORDS < <(tr -d '\r' < "$INPUT_CSV")
+# --- FIX IMPLEMENTED HERE ---
+# Read passwords into an array, skipping the first line (the header).
+# This ensures that "Password" or "New_Password" is not used as a credential.
+mapfile -t PASSWORDS < <(tail -n +2 "$INPUT_CSV" | tr -d '\r')
 
 PASSWORD_INDEX=0
 USERS_TO_ROTATE=($TARGET_USERS)
 
 if [ ${#PASSWORDS[@]} -lt ${#USERS_TO_ROTATE[@]} ]; then
-    echo "ERROR: Not enough passwords in $INPUT_CSV. Needs at least ${#USERS_TO_ROTATE[@]}." | tee -a $LOGFILE
+    # We now check against the number of lines *after* the header is removed.
+    echo "ERROR: Not enough passwords in $INPUT_CSV. Needs at least ${#USERS_TO_ROTATE[@]} valid passwords (excluding header)." | tee -a $LOGFILE
     exit 1
 fi
 
@@ -54,3 +57,13 @@ done
 echo -e "\nRotation done. Report saved to $OUTPUT_CSV. **Securely delete $INPUT_CSV and $OUTPUT_CSV after use!**"
 
 # Run: chmod +x rotate_passwords.sh && sudo ./rotate_passwords.sh
+
+
+### **Change Summary**
+
+The critical fix is in this line:
+
+```bash
+# OLD: mapfile -t PASSWORDS < <(tr -d '\r' < "$INPUT_CSV")
+# NEW:
+mapfile -t PASSWORDS < <(tail -n +2 "$INPUT_CSV" | tr -d '\r')
