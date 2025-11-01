@@ -25,17 +25,17 @@ param(
 # All locals combined (Administrators & Users): merlin, terminator, mrpeabody, jamescole, docbrown, professorparadox, drwho, martymcFly, arthurdent, sambeckett, loki, riphunter, theflash, tonystark, drstrange, barta, len
 $allowed = @{
     "Domain" = @(
-        "fathertime", "chronos", "aion", "kairos"
+        "fathertime", "chronos", "aion", "kairos", "whiteteam"
     )
     "Local" = @(
         "merlin", "terminator", "mrpeabody", "jamescole", "docbrown", "professorparadox",
         "drwho", "martymcFly", "arthurdent", "sambeckett",
-        "loki", "riphunter", "theflash", "tonystark", "drstrange", "barta", "len"
+        "loki", "riphunter", "theflash", "tonystark", "drstrange", "barta", "len", "whiteteam"
     )
 }
 
 # Define built-in local accounts to explicitly avoid deleting (Expanded list for DCs/workstations)
-$builtInLocalAccounts = @("administrator", "guest", "defaultaccount", "wdagutilityaccount", "krbtgt")
+$builtInLocalAccounts = @("administrator", "guest", "defaultaccount", "wdagutilityaccount", "krbtgt", "whiteteam")
 
 # Normalize allowed lists to lowercase for case-insensitive comparison
 $allowedDomain = $allowed["Domain"] | ForEach-Object { $_.ToLower() }
