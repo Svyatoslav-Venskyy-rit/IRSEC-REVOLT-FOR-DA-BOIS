@@ -1,6 +1,11 @@
 <#
 .SYNOPSIS
-  Bulk reset AD account passwords from a CSV (one password per row) for enabled user accounts.
+  Bulk reset AD account passwords from a CSV (one password per row) for enabled user accounts, with exclusion rules.
+
+.DESCRIPTION
+  This script retrieves all enabled AD users (optionally filtered by SearchBase) and assigns them a password
+  from the provided CSV file. It handles cyclic password reuse and includes a critical exclusion for the
+  'whiteteam' account.
 
 .NOTES
   - Assumes the CSV contains one password per line (no header by default).
@@ -11,6 +16,9 @@
 
 .EXAMPLE
   .\Bulk-Reset-ADPasswords.ps1 -PasswordCsvPath "C:\IRSEC\pwlist.csv" -OutputMappingPath "C:\IRSEC\mapping.csv"
+
+.EXAMPLE
+  .\Bulk-Reset-ADPasswords.ps1 -PasswordCsvPath "C:\IRSEC\pwlist.csv" -OutputMappingPath "C:\IRSEC\mapping.csv" -DryRun
 #>
 
 param(
@@ -93,6 +101,23 @@ if (-not $DryRun) {
 $results = @()
 for ($i = 0; $i -lt $users.Count; $i++) {
     $u = $users[$i]
+    
+    # === CRITICAL EXCLUSION RULE: WHITETEAM MUST NOT BE TOUCHED ===
+    if ($u.SamAccountName -ceq 'whiteteam') {
+        $entry = [PSCustomObject]@{
+            SamAccountName  = $u.SamAccountName
+            DistinguishedName = $u.DistinguishedName
+            Password        = "EXCLUDED"
+            Timestamp       = (Get-Date).ToString("s")
+            Result          = "Skipped"
+            ErrorMessage    = "User is explicitly excluded from password reset (whiteteam rule)."
+        }
+        Write-Host "SKIP -> $($u.SamAccountName) (EXCLUDED from reset rule)"
+        $results += $entry
+        continue # Skip to the next user in the loop
+    }
+    # =============================================================
+
     if ($RecyclePasswords) {
         $pw = $passwordLines[$i % $passwordLines.Count]
     } else {
@@ -170,7 +195,8 @@ try {
 # --- Summary ---
 $successCount = ($results | Where-Object { $_.Result -eq "Success" }).Count
 $failCount = ($results | Where-Object { $_.Result -eq "Failed" }).Count
-Write-Host "Done. Successes: $successCount. Failures: $failCount. Mapping written to $OutputMappingPath."
+$skipCount = ($results | Where-Object { $_.Result -eq "Skipped" }).Count # Count the skipped user
+Write-Host "Done. Successes: $successCount. Failures: $failCount. Skipped: $skipCount. Mapping written to $OutputMappingPath."
 
 if ($failCount -gt 0) {
     Write-Warning "Check $OutputMappingPath for failures and error messages."
